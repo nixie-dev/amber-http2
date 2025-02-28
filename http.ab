@@ -1,0 +1,64 @@
+// Amber-HTTP2 © Karim Vergnes <me@thesola.io>
+// Licensed under GNU GPLv2
+// Improved HTTP downloader with range support
+
+import { is_command } from "std/env"
+
+/// Downloads a file (or portion of a file) from a given URL to standard output
+///
+/// ### Arguments
+/// - `url`: The URL to download from
+/// - `start`: The start offset within the file
+/// - `length`: The length of data to download
+pub fun file_stream(url: Text, start: Num = 0, length: Num = -1): Text?
+{
+    let end = ""
+    let wget_post = "cat"
+
+    if length >= 0 {
+        end = "{length}"
+        wget_post = "head -c {length}"
+    }
+
+    if {
+    is_command("curl"):
+        return $ curl -L -r {start}-{end} "{url}" $?
+    is_command("wget"):
+        return $ wget "{url}" --start-pos {start} -O - | {wget_post} $?
+    else:
+        fail 1
+    }
+}
+
+/// Drop-in replacement for Amber's `file_download()` stdlib builtin.
+///
+/// It downloads a file (or portion of a file) from a given URL to a specified
+/// path.
+///
+/// ### Arguments
+/// - `url`: The URL to download from
+/// - `path`: The local path to write to
+/// - `start`: The start offset within the file
+/// - `length`: The length of data to download
+pub fun file_download(url: Text, path: Text, start: Num = 0, length: Num = -1): Bool
+{
+    let end = ""
+    let wget_post = "cat"
+
+    if length >= 0 {
+        end = "{length}"
+        wget_post = "head -c {length}"
+    }
+
+    if {
+    is_command("curl"):
+        trust $ curl -L -o "{path}" -r {start}-{end} "{url}" $
+    is_command("wget"):
+        trust $ wget "{url}" --start-pos {start} -O - | {wget_post} > {path} $
+    else:
+        return false
+    }
+
+    return true
+}
+
